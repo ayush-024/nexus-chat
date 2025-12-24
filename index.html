@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nexus Chat 3.7.1</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' },
+                        dark: { bg: '#0f172a', card: '#1e293b', input: '#334155', border: '#334155' }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out',
+                        'slide-up': 'slideUp 0.3s ease-out',
+                        'zoom-in': 'zoomIn 0.2s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        slideUp: { '0%': { transform: 'translateY(20px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
+                        zoomIn: { '0%': { transform: 'scale(0.95)', opacity: '0' }, '100%': { transform: 'scale(1)', opacity: '1' } }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body, html { height: 100%; overflow: hidden; overscroll-behavior: none; }
+        .h-dvh { height: 100dvh; } 
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+        .glass { background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        
+        /* Custom Media Styles */
+        .media-container { max-height: 300px; overflow: hidden; display: flex; justify-content: center; background: #000; }
+        .media-content { max-height: 300px; width: auto; max-width: 100%; object-fit: contain; }
+    </style>
+</head>
+<body class="bg-dark-bg text-slate-200 font-sans h-dvh w-full overflow-hidden flex flex-col">
+
+    <div id="toast-container" class="fixed top-5 right-5 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- IMAGE LIGHTBOX OVERLAY -->
+    <div id="lightbox" onclick="this.classList.add('hidden')" class="hidden fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 cursor-pointer animate-fade-in">
+        <img id="lightbox-img" src="" class="max-w-full max-h-full rounded-lg shadow-2xl animate-zoom-in">
+        <button class="absolute top-5 right-5 text-white p-2 hover:bg-white/10 rounded-full"><i data-lucide="x" class="w-8 h-8"></i></button>
+    </div>
+
+    <!-- MAIN APP WRAPPER -->
+    <div id="app" class="relative w-full h-full flex flex-col overflow-hidden">
+
+        <!-- ==================== AUTH SCREEN ==================== -->
+        <div id="view-auth" class="absolute inset-0 z-50 flex items-center justify-center p-4 bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80')] bg-cover bg-center">
+            <div class="absolute inset-0 bg-dark-bg/90 backdrop-blur-sm"></div>
+            <div class="relative w-full max-w-sm bg-dark-card border border-dark-border rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
+                <div class="p-8">
+                    <div class="text-center mb-6">
+                        <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-brand-600 text-white mb-4 shadow-lg shadow-brand-500/30">
+                            <i data-lucide="zap" class="w-6 h-6"></i>
+                        </div>
+                        <h1 class="text-2xl font-bold text-white">Nexus Chat</h1>
+                    </div>
+                    <div class="flex bg-dark-bg p-1 rounded-lg border border-dark-border mb-6">
+                        <button id="tab-login" onclick="app.switchAuthTab('login')" class="flex-1 py-2 text-sm font-medium rounded-md bg-brand-600 text-white shadow transition-all">Login</button>
+                        <button id="tab-signup" onclick="app.switchAuthTab('signup')" class="flex-1 py-2 text-sm font-medium rounded-md text-slate-400 hover:text-white transition-all">Sign Up</button>
+                    </div>
+                    <form id="auth-form" class="space-y-4">
+                        <div id="field-name" class="hidden">
+                            <label class="block text-xs font-medium text-slate-400 mb-1 ml-1">FULL NAME</label>
+                            <input type="text" id="auth-name" class="w-full bg-dark-bg border border-dark-border text-white text-sm rounded-xl focus:border-brand-500 p-3 outline-none" placeholder="John Doe">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1 ml-1">EMAIL (USER ID)</label>
+                            <input type="email" id="auth-email" class="w-full bg-dark-bg border border-dark-border text-white text-sm rounded-xl focus:border-brand-500 p-3 outline-none" placeholder="name@example.com" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1 ml-1">PASSWORD</label>
+                            <input type="password" id="auth-pass" class="w-full bg-dark-bg border border-dark-border text-white text-sm rounded-xl focus:border-brand-500 p-3 outline-none" placeholder="••••••••" required>
+                        </div>
+                        <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-medium rounded-xl text-sm px-5 py-3 transition-all mt-2">
+                            <span id="auth-submit-text">Login to Account</span>
+                        </button>
+                    </form>
+                    <div class="text-center mt-4">
+                         <span class="text-xs text-slate-500" id="backend-indicator">Loading status...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== DASHBOARD ==================== -->
+        <div id="view-dashboard" class="hidden absolute inset-0 z-40 bg-dark-bg flex flex-col h-full">
+            <nav class="glass h-16 flex-none flex items-center justify-between px-6 z-20">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-white font-bold">N</div>
+                    <span class="font-semibold text-white tracking-wide hidden sm:block">Nexus</span>
+                </div>
+                <div class="flex bg-slate-800/50 p-1 rounded-lg">
+                    <button onclick="app.switchDashView('chats')" id="nav-chats" class="px-4 py-1.5 text-xs font-medium rounded-md bg-brand-600 text-white shadow">Chats</button>
+                    <button onclick="app.switchDashView('settings')" id="nav-settings" class="px-4 py-1.5 text-xs font-medium rounded-md text-slate-400 hover:text-white">Settings</button>
+                </div>
+                <button onclick="app.logout()" class="p-2 hover:bg-red-500/10 hover:text-red-400 rounded-lg transition-colors text-slate-400" title="Logout">
+                    <i data-lucide="log-out" class="w-5 h-5"></i>
+                </button>
+            </nav>
+
+            <div class="flex-1 overflow-hidden flex flex-col sm:flex-row h-full relative">
+                
+                <!-- CHAT LIST -->
+                <div id="dash-chats" class="w-full sm:w-80 border-r border-dark-border bg-dark-card/50 flex flex-col h-full absolute sm:relative inset-0 z-10">
+                    <div class="p-4 border-b border-dark-border flex-none space-y-2">
+                        <!-- Action Buttons -->
+                        <div class="flex gap-2">
+                            <button onclick="app.openModal('create_group')" class="flex-1 flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-500 text-white py-2.5 rounded-lg text-xs font-medium transition-all shadow-lg shadow-brand-500/20">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i> New Group
+                            </button>
+                            <button onclick="app.openModal('join_group')" class="flex-1 flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white py-2.5 rounded-lg text-xs font-medium transition-all">
+                                <i data-lucide="log-in" class="w-4 h-4"></i> Join Group
+                            </button>
+                        </div>
+                        <button onclick="app.openModal('create_dm')" class="w-full flex items-center justify-center gap-2 bg-dark-bg hover:bg-slate-800 border border-dark-border text-slate-300 py-2.5 rounded-lg text-xs font-medium transition-all">
+                            <i data-lucide="user-plus" class="w-4 h-4"></i> Direct Message
+                        </button>
+                    </div>
+                    <div id="room-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
+                </div>
+
+                <!-- SETTINGS -->
+                <div id="dash-settings" class="hidden w-full h-full absolute inset-0 z-20 bg-dark-bg flex items-center justify-center p-4">
+                    <div class="w-full max-w-md bg-dark-card border border-dark-border rounded-2xl p-8 shadow-2xl relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-brand-600 to-purple-600 opacity-20"></div>
+                        <div class="relative flex flex-col items-center">
+                            <div id="settings-avatar" class="w-24 h-24 rounded-full bg-brand-600 border-4 border-dark-card flex items-center justify-center text-4xl font-bold text-white mb-4 shadow-xl">U</div>
+                            <h2 id="settings-name" class="text-2xl font-bold text-white">User Name</h2>
+                            <span id="settings-email" class="text-sm text-brand-400 mb-6">@userid</span>
+                            <div class="w-full space-y-4">
+                                <div class="bg-dark-bg p-4 rounded-xl border border-dark-border flex items-center gap-4">
+                                    <div class="p-2 bg-slate-800 rounded-lg text-slate-400"><i data-lucide="mail" class="w-5 h-5"></i></div>
+                                    <div class="flex-1 overflow-hidden">
+                                        <p class="text-[10px] text-slate-500 font-bold uppercase">Email Address</p>
+                                        <p id="settings-email-detail" class="text-sm text-slate-200 truncate">user@example.com</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="app.switchDashView('chats')" class="mt-8 text-sm text-slate-400 hover:text-white flex items-center gap-2">
+                                <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Chats
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== CHAT ROOM ==================== -->
+        <div id="view-chat" class="hidden absolute inset-0 z-50 bg-dark-bg flex flex-col h-dvh">
+            <header class="glass h-16 flex-none flex items-center justify-between px-4 z-20">
+                <div class="flex items-center gap-3">
+                    <button onclick="app.goToDashboard()" class="p-2 -ml-2 text-slate-400 hover:text-white sm:hidden">
+                        <i data-lucide="arrow-left" class="w-6 h-6"></i>
+                    </button>
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                        <span id="chat-avatar">#</span>
+                    </div>
+                    <div>
+                        <h2 id="chat-room-name" class="font-bold text-white text-base leading-tight">Room Name</h2>
+                        <span id="chat-type-label" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">Group</span>
+                    </div>
+                </div>
+                <button onclick="app.refreshMessages()" class="p-2 text-slate-400 hover:text-white"><i data-lucide="rotate-ccw" class="w-5 h-5"></i></button>
+            </header>
+
+            <div id="messages-container" class="flex-1 overflow-y-auto p-4 space-y-3 scroll-smooth bg-dark-bg"></div>
+
+            <div class="flex-none p-3 pb-safe glass z-30">
+                <div id="file-preview" class="hidden mb-2 px-3 py-2 bg-dark-card border border-dark-border rounded-lg flex items-center justify-between animate-fade-in group">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div id="file-preview-icon" class="w-10 h-10 rounded bg-slate-800 flex items-center justify-center flex-none">
+                            <i data-lucide="file" class="w-5 h-5 text-slate-400"></i>
+                        </div>
+                        <div class="flex flex-col overflow-hidden">
+                            <span id="file-preview-name" class="text-xs text-slate-200 font-medium truncate">file.ext</span>
+                            <span class="text-[10px] text-brand-400 font-bold uppercase tracking-wider">Ready to Send</span>
+                        </div>
+                    </div>
+                    <button onclick="app.clearFile()" class="p-2 text-slate-400 hover:text-red-400 rounded-full hover:bg-slate-700 transition-colors"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+
+                <form id="chat-form" class="flex items-end gap-2">
+                    <input type="file" id="file-input" class="hidden" accept="image/*,video/*,audio/*,.pdf,.doc,.docx" onchange="app.handleFileSelect(this)">
+                    <button type="button" onclick="document.getElementById('file-input').click()" class="flex-none p-3 text-slate-400 hover:text-brand-400 hover:bg-slate-800 rounded-xl transition-colors"><i data-lucide="paperclip" class="w-6 h-6"></i></button>
+                    <div class="flex-1 bg-dark-input rounded-xl border border-dark-border focus-within:border-brand-500 transition-colors">
+                        <input type="text" id="message-input" autocomplete="off" class="w-full bg-transparent border-0 text-white placeholder-slate-500 focus:ring-0 py-3 px-4 max-h-32" placeholder="Type a message...">
+                    </div>
+                    <button type="submit" class="flex-none p-3 bg-brand-600 hover:bg-brand-500 text-white rounded-xl shadow-lg shadow-brand-500/20 transition-all active:scale-95"><i data-lucide="send" class="w-5 h-5"></i></button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ==================== MODALS ==================== -->
+        <div id="modal-overlay" class="hidden fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+            <div class="bg-dark-card border border-dark-border rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+                <h3 id="modal-title" class="text-lg font-bold text-white mb-4">New Chat</h3>
+                <form id="modal-form" class="space-y-4">
+                    <input type="hidden" id="modal-action">
+                    
+                    <div id="field-group-name">
+                        <label class="text-xs text-slate-400 font-bold ml-1">GROUP NAME</label>
+                        <input type="text" id="modal-room-name" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2.5 text-white focus:border-brand-500 outline-none" placeholder="e.g. Avengers">
+                    </div>
+                    
+                    <div id="field-dm-email" class="hidden">
+                        <label class="text-xs text-slate-400 font-bold ml-1">USER EMAIL</label>
+                        <input type="email" id="modal-target-email" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2.5 text-white focus:border-brand-500 outline-none" placeholder="friend@example.com">
+                    </div>
+
+                    <div id="field-password">
+                        <label class="text-xs text-slate-400 font-bold ml-1">PASSWORD</label>
+                        <input type="password" id="modal-pass" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2.5 text-white focus:border-brand-500 outline-none">
+                    </div>
+                    
+                    <div class="flex gap-2 mt-4">
+                        <button type="button" onclick="app.closeModal()" class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-sm">Cancel</button>
+                        <button type="submit" class="flex-1 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-sm font-medium">Confirm</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- APP LOGIC -->
+    <script>
+        const USE_PHP = true; // <<< CHANGE TO TRUE BEFORE UPLOADING
+        const API_URL = 'api.php';
+
+        class App {
+            constructor() {
+                this.user = JSON.parse(localStorage.getItem('nexus_user')) || null;
+                this.currentRoom = null;
+                this.currentRoomType = 'group';
+                this.activeAuthTab = 'login';
+                this.file = null;
+                this.init();
+            }
+
+            init() {
+                const ind = document.getElementById('backend-indicator');
+                if (USE_PHP) {
+                    ind.innerHTML = '<span class="text-brand-400 font-semibold">Connected to Server (MySQL)</span>';
+                    ind.classList.remove('text-slate-500');
+                    ind.classList.add('text-brand-400');
+                } else {
+                    ind.innerHTML = 'Running in Simulation Mode';
+                    ind.classList.add('text-slate-500');
+                }
+
+                lucide.createIcons();
+                this.setupEventListeners();
+                if (this.user) this.showDashboard();
+                else this.showAuth();
+                
+                // Polling Loop
+                setInterval(() => { 
+                    if (this.user) {
+                        if (this.currentRoom) {
+                            this.fetchMessages(); // Refresh current chat
+                            this.markRoomAsRead(this.currentRoom); // Mark as read while open
+                        } else {
+                            this.loadRoomList(); // Refresh list for badges
+                        }
+                    }
+                }, 3000);
+            }
+
+            setupEventListeners() {
+                document.getElementById('auth-form').addEventListener('submit', (e) => this.handleAuth(e));
+                document.getElementById('modal-form').addEventListener('submit', (e) => this.handleModalSubmit(e));
+                document.getElementById('chat-form').addEventListener('submit', (e) => this.sendMessage(e));
+            }
+
+            // --- NAVIGATION ---
+            showAuth() {
+                document.getElementById('view-auth').classList.remove('hidden');
+                document.getElementById('view-dashboard').classList.add('hidden');
+                document.getElementById('view-chat').classList.add('hidden');
+            }
+
+            showDashboard() {
+                document.getElementById('view-auth').classList.add('hidden');
+                document.getElementById('view-dashboard').classList.remove('hidden');
+                document.getElementById('view-chat').classList.add('hidden');
+                this.updateSettingsView();
+                this.loadRoomList();
+            }
+
+            switchDashView(view) {
+                const chatsView = document.getElementById('dash-chats');
+                const settingsView = document.getElementById('dash-settings');
+                const btnChats = document.getElementById('nav-chats');
+                const btnSettings = document.getElementById('nav-settings');
+                if (view === 'settings') {
+                    chatsView.classList.add('hidden');
+                    settingsView.classList.remove('hidden');
+                    btnSettings.className = "px-4 py-1.5 text-xs font-medium rounded-md bg-brand-600 text-white shadow";
+                    btnChats.className = "px-4 py-1.5 text-xs font-medium rounded-md text-slate-400 hover:text-white";
+                } else {
+                    settingsView.classList.add('hidden');
+                    chatsView.classList.remove('hidden');
+                    btnChats.className = "px-4 py-1.5 text-xs font-medium rounded-md bg-brand-600 text-white shadow";
+                    btnSettings.className = "px-4 py-1.5 text-xs font-medium rounded-md text-slate-400 hover:text-white";
+                }
+            }
+
+            updateSettingsView() {
+                document.getElementById('settings-name').innerText = this.user.name;
+                document.getElementById('settings-email').innerText = this.user.email;
+                document.getElementById('settings-email-detail').innerText = this.user.email;
+                document.getElementById('settings-avatar').innerText = this.user.name.charAt(0).toUpperCase();
+            }
+
+            showChat(roomName, type, displayName) {
+                this.currentRoom = roomName;
+                this.currentRoomType = type;
+                document.getElementById('view-dashboard').classList.add('hidden');
+                document.getElementById('view-chat').classList.remove('hidden');
+                
+                const finalName = displayName || roomName;
+                document.getElementById('chat-room-name').innerText = finalName;
+                document.getElementById('chat-avatar').innerText = finalName.charAt(0).toUpperCase();
+                
+                const label = document.getElementById('chat-type-label');
+                if(type === 'dm') {
+                    label.innerText = 'Private';
+                    label.className = 'text-[10px] px-1.5 py-0.5 rounded bg-brand-900/50 text-brand-400 border border-brand-800';
+                } else {
+                    label.innerText = 'Group';
+                    label.className = 'text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700';
+                }
+                
+                this.markRoomAsRead(roomName);
+                this.fetchMessages();
+            }
+
+            goToDashboard() {
+                this.currentRoom = null;
+                document.getElementById('view-chat').classList.add('hidden');
+                document.getElementById('view-dashboard').classList.remove('hidden');
+                this.loadRoomList(); // Refresh counts
+            }
+
+            // --- AUTH ---
+            switchAuthTab(tab) {
+                this.activeAuthTab = tab;
+                const nameField = document.getElementById('field-name');
+                const btn = document.getElementById('auth-submit-text');
+                const tabLogin = document.getElementById('tab-login');
+                const tabSignup = document.getElementById('tab-signup');
+                if (tab === 'signup') {
+                    nameField.classList.remove('hidden');
+                    btn.innerText = 'Create Account';
+                    tabSignup.className = "flex-1 py-2 text-sm font-medium rounded-md bg-brand-600 text-white shadow transition-all";
+                    tabLogin.className = "flex-1 py-2 text-sm font-medium rounded-md text-slate-400 hover:text-white transition-all";
+                } else {
+                    nameField.classList.add('hidden');
+                    btn.innerText = 'Login to Account';
+                    tabLogin.className = "flex-1 py-2 text-sm font-medium rounded-md bg-brand-600 text-white shadow transition-all";
+                    tabSignup.className = "flex-1 py-2 text-sm font-medium rounded-md text-slate-400 hover:text-white transition-all";
+                }
+            }
+
+            async handleAuth(e) {
+                e.preventDefault();
+                const email = document.getElementById('auth-email').value.trim();
+                const pass = document.getElementById('auth-pass').value;
+                const name = document.getElementById('auth-name').value.trim();
+
+                if (USE_PHP) {
+                    const fd = new FormData();
+                    fd.append('action', this.activeAuthTab);
+                    fd.append('email', email);
+                    fd.append('password', pass);
+                    if (this.activeAuthTab === 'signup') fd.append('name', name);
+                    try {
+                        const res = await fetch(API_URL, { method: 'POST', body: fd });
+                        const data = await res.json();
+                        if (data.success) {
+                            this.user = { email, name: data.name || name };
+                            localStorage.setItem('nexus_user', JSON.stringify(this.user));
+                            this.showDashboard();
+                        } else this.toast(data.message, 'error');
+                    } catch (err) { this.toast('Connection error', 'error'); }
+                } else {
+                    // MOCK
+                    const users = JSON.parse(localStorage.getItem('nexus_users') || '{}');
+                    if(this.activeAuthTab === 'signup') {
+                        if(users[email]) return this.toast('Email taken', 'error');
+                        users[email] = { name: name || 'User', pass };
+                        localStorage.setItem('nexus_users', JSON.stringify(users));
+                        this.user = { email, name: name || 'User' };
+                    } else {
+                        if(users[email] && users[email].pass === pass) {
+                            this.user = { email, name: users[email].name };
+                        } else {
+                            this.user = { email, name: 'Guest' };
+                        }
+                    }
+                    localStorage.setItem('nexus_user', JSON.stringify(this.user));
+                    this.showDashboard();
+                }
+            }
+
+            logout() {
+                localStorage.removeItem('nexus_user');
+                this.user = null;
+                this.showAuth();
+            }
+
+            // --- MODALS & ROOMS ---
+            openModal(action) {
+                document.getElementById('modal-overlay').classList.remove('hidden');
+                document.getElementById('modal-action').value = action;
+                
+                const title = document.getElementById('modal-title');
+                const fieldGroup = document.getElementById('field-group-name');
+                const fieldDm = document.getElementById('field-dm-email');
+                const fieldPass = document.getElementById('field-password');
+
+                if (action === 'create_dm') {
+                    title.innerText = 'Start Direct Message';
+                    fieldGroup.classList.add('hidden');
+                    fieldDm.classList.remove('hidden');
+                    fieldPass.classList.add('hidden');
+                } else if (action === 'create_group') {
+                    title.innerText = 'Create New Group';
+                    fieldGroup.classList.remove('hidden');
+                    fieldDm.classList.add('hidden');
+                    fieldPass.classList.remove('hidden');
+                } else { // join_group
+                    title.innerText = 'Join Existing Group';
+                    fieldGroup.classList.remove('hidden');
+                    fieldDm.classList.add('hidden');
+                    fieldPass.classList.remove('hidden');
+                }
+            }
+
+            closeModal() {
+                document.getElementById('modal-overlay').classList.add('hidden');
+                document.getElementById('modal-form').reset();
+            }
+
+            async handleModalSubmit(e) {
+                e.preventDefault();
+                const action = document.getElementById('modal-action').value;
+                const groupName = document.getElementById('modal-room-name').value.trim();
+                const targetEmail = document.getElementById('modal-target-email').value.trim();
+                const pass = document.getElementById('modal-pass').value;
+
+                if (USE_PHP) {
+                    const fd = new FormData();
+                    fd.append('email', this.user.email);
+                    
+                    if (action === 'create_dm') {
+                        fd.append('action', 'create_dm');
+                        fd.append('target_email', targetEmail);
+                    } else {
+                        fd.append('action', action);
+                        fd.append('room_name', groupName);
+                        fd.append('password', pass);
+                    }
+
+                    try {
+                        const res = await fetch(API_URL, { method: 'POST', body: fd });
+                        const data = await res.json();
+                        if (data.success) {
+                            this.closeModal();
+                            this.loadRoomList();
+                            this.toast('Success!', 'success');
+                        } else this.toast(data.message, 'error');
+                    } catch (err) { this.toast('Error', 'error'); }
+                } else {
+                    // MOCK
+                    const roomsKey = `nexus_rooms_${this.user.email}`;
+                    let rooms = JSON.parse(localStorage.getItem(roomsKey) || '[]');
+                    if (action === 'create_dm') {
+                        const id = `dm_${this.user.email}_${targetEmail}`;
+                        if(!rooms.find(r=>r.id===id)) rooms.push({id, type:'dm', name: targetEmail, display_name: targetEmail}); 
+                    } else {
+                        if(!rooms.find(r=>r.name===groupName)) rooms.push({id: groupName, type:'group', name: groupName, display_name: groupName});
+                    }
+                    localStorage.setItem(roomsKey, JSON.stringify(rooms));
+                    this.closeModal();
+                    this.loadRoomList();
+                }
+            }
+
+            async loadRoomList() {
+                const list = document.getElementById('room-list');
+                
+                let rooms = [];
+                if (USE_PHP) {
+                    const fd = new FormData();
+                    fd.append('action', 'get_rooms');
+                    fd.append('email', this.user.email);
+                    try {
+                        const res = await fetch(API_URL, { method: 'POST', body: fd });
+                        const data = await res.json();
+                        if(data.success) rooms = data.rooms;
+                    } catch(e) {}
+                } else {
+                    // MOCK
+                    rooms = JSON.parse(localStorage.getItem(`nexus_rooms_${this.user.email}`) || '[]');
+                    // Mock unread calculation
+                    rooms = rooms.map(r => {
+                        const lastRead = localStorage.getItem(`nexus_read_${this.user.email}_${r.id}`) || '1970-01-01';
+                        const msgs = JSON.parse(localStorage.getItem(`nexus_msgs_${r.id}`) || '[]');
+                        const unread = msgs.filter(m => m.created_at > lastRead).length;
+                        return { ...r, unread };
+                    });
+                }
+
+                if(rooms.length === 0) {
+                    list.innerHTML = '<div class="text-center mt-8 text-xs text-slate-500">No chats yet.</div>';
+                    return;
+                }
+
+                list.innerHTML = ''; // Clear only before rebuild
+                rooms.forEach(room => {
+                    const btn = document.createElement('button');
+                    btn.className = 'w-full text-left p-3 rounded-xl hover:bg-white/5 transition-all group flex items-center gap-3 mb-1';
+                    
+                    let displayName = room.display_name || room.name;
+                    let icon = room.type === 'dm' ? 'user' : 'hash';
+                    let type = room.type || 'group';
+                    let id = room.id || room.name;
+                    let unread = room.unread || 0;
+
+                    btn.onclick = () => this.showChat(id, type, displayName);
+                    
+                    btn.innerHTML = `
+                        <div class="relative w-10 h-10 rounded-full ${type === 'dm' ? 'bg-gradient-to-br from-purple-600 to-pink-600' : 'bg-slate-700'} flex items-center justify-center text-white font-bold text-sm shadow-md">
+                            ${displayName.charAt(0).toUpperCase()}
+                            ${unread > 0 ? `<div class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-dark-bg flex items-center justify-center text-[10px] font-bold">${unread > 99 ? '99+' : unread}</div>` : ''}
+                        </div>
+                        <div class="flex-1 overflow-hidden">
+                            <div class="flex justify-between items-center mb-0.5">
+                                <span class="font-medium text-slate-200 text-sm truncate">${displayName}</span>
+                            </div>
+                            <div class="text-xs text-slate-500 truncate flex items-center gap-1">
+                                <i data-lucide="${icon}" class="w-3 h-3"></i> ${type === 'dm' ? 'Private' : 'Group'}
+                            </div>
+                        </div>
+                    `;
+                    list.appendChild(btn);
+                });
+                lucide.createIcons();
+            }
+
+            async markRoomAsRead(roomName) {
+                if (USE_PHP) {
+                    const fd = new FormData();
+                    fd.append('action', 'mark_read');
+                    fd.append('room_name', roomName);
+                    fd.append('email', this.user.email);
+                    try { fetch(API_URL, { method: 'POST', body: fd }); } catch(e){}
+                } else {
+                    localStorage.setItem(`nexus_read_${this.user.email}_${roomName}`, new Date().toISOString());
+                }
+            }
+
+            // --- MESSAGING ---
+            async sendMessage(e) {
+                e.preventDefault();
+                const input = document.getElementById('message-input');
+                const text = input.value.trim();
+                
+                if (!text && !this.file) return;
+
+                const msgData = {
+                    room: this.currentRoom,
+                    user: this.user.name,
+                    email: this.user.email,
+                    text: text,
+                    file: this.file
+                };
+                
+                input.value = '';
+                this.clearFile();
+
+                if (USE_PHP) {
+                    const fd = new FormData();
+                    fd.append('action', 'send_message');
+                    fd.append('room_name', msgData.room);
+                    fd.append('username', msgData.user);
+                    fd.append('email', msgData.email);
+                    fd.append('message', msgData.text);
+                    if (msgData.file) fd.append('file', msgData.file);
+                    await fetch(API_URL, { method: 'POST', body: fd });
+                    this.fetchMessages();
+                } else {
+                    const key = `nexus_msgs_${this.currentRoom}`;
+                    const msgs = JSON.parse(localStorage.getItem(key) || '[]');
+                    let type = 'text';
+                    if (msgData.file) {
+                        const ext = msgData.file.name.split('.').pop().toLowerCase();
+                        if(['jpg','png','gif','jpeg'].includes(ext)) type = 'image';
+                        else if(['mp4','webm','mov'].includes(ext)) type = 'video';
+                        else type = 'file';
+                    }
+                    
+                    const newMsg = {
+                        username: msgData.user,
+                        user_email: msgData.email,
+                        message: msgData.text,
+                        type: type,
+                        file_data: msgData.file ? URL.createObjectURL(msgData.file) : null,
+                        created_at: new Date().toISOString()
+                    };
+                    msgs.push(newMsg);
+                    localStorage.setItem(key, JSON.stringify(msgs));
+                    this.fetchMessages();
+                }
+            }
+
+            async fetchMessages() {
+                if(!this.currentRoom) return;
+                let msgs = [];
+                if (USE_PHP) {
+                    const fd = new FormData();
+                    fd.append('action', 'get_messages');
+                    fd.append('room_name', this.currentRoom);
+                    fd.append('email', this.user.email);
+                    try {
+                        const res = await fetch(API_URL, { method: 'POST', body: fd });
+                        const data = await res.json();
+                        if(data.success) msgs = data.messages;
+                    } catch(e){}
+                } else {
+                    // MOCK logic...
+                    msgs = JSON.parse(localStorage.getItem(`nexus_msgs_${this.currentRoom}`) || '[]');
+                    // Mock read receipts...
+                    const roomsKey = `nexus_rooms_${this.user.email}`;
+                    let rooms = JSON.parse(localStorage.getItem(roomsKey) || '[]');
+                    let current = rooms.find(r => r.id === this.currentRoom);
+                    if (current && current.type === 'dm') {
+                        let otherEmail = current.name;
+                        let otherRead = localStorage.getItem(`nexus_read_${otherEmail}_${this.currentRoom}`);
+                        msgs = msgs.map(m => {
+                            if (m.user_email === this.user.email) {
+                                return { ...m, is_seen: otherRead && m.created_at <= otherRead };
+                            }
+                            return m;
+                        });
+                    }
+                }
+                this.renderMessages(msgs);
+            }
+
+            renderMessages(messages) {
+                const container = document.getElementById('messages-container');
+                const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+                
+                container.innerHTML = '';
+                
+                messages.forEach((msg, index) => {
+                    const isMe = (msg.user_email || '') === this.user.email;
+                    const div = document.createElement('div');
+                    div.className = `flex w-full ${isMe ? 'justify-end' : 'justify-start'}`;
+                    
+                    let content = '';
+                    if (msg.file_data) {
+                        if (msg.type === 'image') {
+                            content = `
+                            <div class="media-container rounded-lg mb-1 cursor-pointer hover:opacity-90 transition-opacity">
+                                <img src="${msg.file_data}" loading="lazy" class="media-content rounded-lg" onclick="app.openLightbox(this.src)">
+                            </div>`;
+                        } else if (msg.type === 'video') {
+                            content = `
+                            <div class="rounded-lg mb-1 overflow-hidden bg-black max-w-[280px]">
+                                <video src="${msg.file_data}" controls preload="metadata" class="w-full max-h-[300px]"></video>
+                            </div>`;
+                        } else {
+                             content = `
+                            <a href="${msg.file_data}" target="_blank" class="flex items-center gap-3 p-3 bg-white/10 rounded-lg mb-1 hover:bg-white/20 transition-colors border border-white/5">
+                                <div class="bg-slate-800 p-2 rounded"><i data-lucide="file" class="w-5 h-5 text-white"></i></div>
+                                <div class="flex-1 overflow-hidden">
+                                    <div class="text-xs font-medium text-white truncate">Attachment</div>
+                                    <div class="text-[10px] text-brand-300">Click to Download</div>
+                                </div>
+                                <i data-lucide="download" class="w-4 h-4 text-slate-400"></i>
+                            </a>`;
+                        }
+                    }
+                    
+                    if (msg.message) content += `<p class="leading-relaxed whitespace-pre-wrap break-words">${this.escape(msg.message)}</p>`;
+
+                    // Time Gap Logic
+                    const msgDate = new Date(msg.created_at);
+                    const prevDate = index > 0 ? new Date(messages[index-1].created_at) : null;
+                    const diffMin = prevDate ? (msgDate - prevDate) / 60000 : 11;
+                    const showTime = diffMin >= 10 || index === 0;
+
+                    // Read Receipt Logic
+                    let statusIcon = '';
+                    if (isMe && this.currentRoomType === 'dm') {
+                        if (msg.is_seen) statusIcon = `<i data-lucide="check-check" class="w-3 h-3 text-blue-400 ml-1"></i>`;
+                        else statusIcon = `<i data-lucide="check" class="w-3 h-3 text-slate-400 ml-1"></i>`;
+                    }
+
+                    let footer = '';
+                    if (showTime || statusIcon) {
+                        footer = `
+                            <div class="flex items-center ${isMe ? 'justify-end mr-1' : 'ml-1'} mt-1 gap-0.5">
+                                ${showTime ? `<span class="text-[9px] text-slate-500 font-medium">${msgDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>` : ''}
+                                ${statusIcon}
+                            </div>`;
+                    }
+
+                    div.innerHTML = `
+                        <div class="max-w-[85%] sm:max-w-[70%]">
+                            ${(!isMe && this.currentRoomType === 'group') ? `<div class="text-[10px] text-slate-400 font-semibold mb-1 ml-1">${msg.username || 'User'}</div>` : ''}
+                            <div class="${isMe ? 'bg-brand-600 text-white rounded-2xl rounded-tr-sm' : 'bg-dark-card border border-dark-border text-slate-200 rounded-2xl rounded-tl-sm'} px-4 py-2 shadow-sm break-words relative group overflow-hidden">
+                                ${content}
+                            </div>
+                            ${footer}
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+
+                if (isNearBottom) container.scrollTop = container.scrollHeight;
+                lucide.createIcons();
+            }
+
+            handleFileSelect(input) {
+                if (input.files[0]) {
+                    this.file = input.files[0];
+                    const prev = document.getElementById('file-preview');
+                    const icon = document.getElementById('file-preview-icon');
+                    const name = document.getElementById('file-preview-name');
+                    
+                    prev.classList.remove('hidden');
+                    name.innerText = this.file.name;
+
+                    // Show Image Thumbnail
+                    if (this.file.type.startsWith('image/')) {
+                        const url = URL.createObjectURL(this.file);
+                        icon.innerHTML = `<img src="${url}" class="w-full h-full object-cover">`;
+                    } else if (this.file.type.startsWith('video/')) {
+                        icon.innerHTML = `<i data-lucide="video" class="w-5 h-5 text-brand-400"></i>`;
+                    } else {
+                        icon.innerHTML = `<i data-lucide="file" class="w-5 h-5 text-slate-400"></i>`;
+                    }
+                    lucide.createIcons();
+                }
+            }
+
+            clearFile() {
+                this.file = null;
+                document.getElementById('file-input').value = '';
+                document.getElementById('file-preview').classList.add('hidden');
+            }
+
+            openLightbox(src) {
+                const lb = document.getElementById('lightbox');
+                const img = document.getElementById('lightbox-img');
+                img.src = src;
+                lb.classList.remove('hidden');
+            }
+
+            refreshMessages() { this.fetchMessages(); }
+            escape(str) { return str ? str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
+            
+            toast(msg, type = 'info') {
+                const toast = document.createElement('div');
+                toast.className = `${type === 'error' ? 'bg-red-600' : 'bg-brand-600'} text-white text-sm px-4 py-3 rounded-xl shadow-lg animate-fade-in`;
+                toast.innerText = msg;
+                document.getElementById('toast-container').appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }
+        }
+        const app = new App();
+    </script>
+</body>
+</html>
+
+
