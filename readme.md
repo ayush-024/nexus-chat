@@ -1,6 +1,7 @@
 Nexus Chat ⚡
 
 Nexus Chat is a lightweight, responsive, and secure real-time messaging application. It features a modern dark-mode UI, support for direct messages and private groups, media sharing (images/videos), and message encryption.
+
 🚀 Features
  * Real-time Messaging: Messages update instantly via optimized polling.
  * Direct Messages (DM): Private 1-on-1 conversations with read receipts (blue ticks).
@@ -33,20 +34,19 @@ Modify the file named db.php and add your database credentials:
  * Place the project folder in your web server's root directory (e.g., htdocs for XAMPP or /var/www/html for Apache).
  * Open index.html and ensure the USE_PHP constant is set to true.
  * Access the app via your browser (e.g., http://localhost/nexus-chat).
- 
-📂 Project Structure
-nexus-chat/
-├── index.html      # Main frontend
-├── api.php         # Handles all API
-├── db.php          # Database connect
-├── uploads/        # storage
-└── README.md       # doc
 
-🔐 Security Note
-This application uses AES-128-ECB for message encryption. While this provides a layer of privacy for a portfolio or personal project, ECB mode is generally not recommended for high-security enterprise applications. For production environments, consider upgrading to AES-256-GCM.
+   
+🗂️ Project Structure 
+	nexus-chat/ 
+	├── index.html   # Main frontend 
+	├── api.php 	 # Handles all API 
+	├── db.php 	  # Database connect 
+	├── uploads/ 	# storage 
+	└── README.md    # doc
+	
+🔐 Security Note This application uses AES-128-ECB for message encryption. While this provides a layer of privacy for a portfolio or personal project, ECB mode is generally not recommended for high-security enterprise applications. For production environments, consider upgrading to AES-256-GCM.
 
-🤝 Contributing
-Contributions and feature requests are welcome! Feel free to check the [https://github.com/ayush-024/nexus-chat/issues/new](issues page).
+🤝 Contributing Contributions and feature requests are welcome! Feel free to check the <a href="https://github.com/ayush-024/nexus-chat/issues/new">issues page</a>.
 
 📩 Contact me
-[https://t.me/ayushpratap24](Ayush Singh)
+<a href="https://t.me/ayushpratap24">Ayush Singh</a>
