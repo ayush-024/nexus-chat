@@ -37,6 +37,7 @@ Modify the file named db.php and add your database credentials:
 
    
 🗂️ Project Structure 
+
 	nexus-chat/ 
 	├── index.html   # Main frontend 
 	├── api.php 	 # Handles all API 
