@@ -36,15 +36,17 @@ Modify the file named db.php and add your database credentials:
  
 📂 Project Structure
 nexus-chat/
-├── index.html      # Main frontend application (Single Page App)
-├── api.php         # Handles all API requests (Auth, Chat, Files)
-├── db.php          # Database connection (User created)
-├── uploads/        # Directory for storing user media
-└── README.md       # Project documentation
+├── index.html      # Main frontend
+├── api.php         # Handles all API
+├── db.php          # Database connect
+├── uploads/        # storage
+└── README.md       # doc
 
 🔐 Security Note
 This application uses AES-128-ECB for message encryption. While this provides a layer of privacy for a portfolio or personal project, ECB mode is generally not recommended for high-security enterprise applications. For production environments, consider upgrading to AES-256-GCM.
+
 🤝 Contributing
-Contributions, https://www.google.com/search?q=issues, and feature requests are welcome! Feel free to check the issues page.
-📄 License
-This project is open source and available under the MIT License.
+Contributions and feature requests are welcome! Feel free to check the [https://github.com/ayush-024/nexus-chat/issues/new](issues page).
+
+📩 Contact me
+[https://t.me/ayushpratap24](Ayush Singh)
